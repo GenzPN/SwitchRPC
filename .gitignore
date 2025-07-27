@@ -6,3 +6,11 @@ DerivedData/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
+
+*.nro
+*.elf
+*.npdm
+*.nso
+*.nsp
+/Sources/SwitchRPC/.build
+/Sources/SwitchRPCConfig/.build
