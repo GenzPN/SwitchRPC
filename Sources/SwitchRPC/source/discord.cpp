@@ -60,6 +60,32 @@ void saveRefreshTokenToFile() {
     writeToLog("[Discord] Successfully saved new refresh token to file");
 }
 
+
+int curlDebugCallback(CURL *handle, curl_infotype type, char *data, size_t size, void *userp) {
+    (void)handle; // Unused
+    (void)userp;  // Unused
+
+    const char* type_str = "";
+    switch (type) {
+        case CURLINFO_TEXT:         type_str = "Info"; break;
+        case CURLINFO_HEADER_IN:    type_str = "Recv Header"; break;
+        case CURLINFO_HEADER_OUT:   type_str = "Send Header"; break;
+        default: return 0; 
+    }
+
+    std::string text(data, size);
+
+    while(!text.empty() && (text.back() == '\n' || text.back() == '\r')) {
+        text.pop_back();
+    }
+
+    if (!text.empty()) {
+        writeToLog("[cURL %s] %s", type_str, text.c_str());
+    }
+
+    return 0;
+}
+
 // curl helper for easy requests to discord,
 // specify url, method, headers, and body as needed and a pointer to a string to store the response in, and the size of that string.
 void sendRequest(const char* url, const char* method, struct curl_slist* headers, const char* body, std::string* response) {
@@ -79,6 +105,9 @@ void sendRequest(const char* url, const char* method, struct curl_slist* headers
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, curlDebugCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, [](char* ptr, size_t size, size_t nmemb, void* userdata) -> size_t {
             size_t total_size = size * nmemb;
             if (userdata != NULL) {

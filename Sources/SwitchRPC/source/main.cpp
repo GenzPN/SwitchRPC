@@ -120,19 +120,21 @@ void __appInit(void)
     initLog();
 
     // Add other services you want to use here.
-    SocketInitConfig socketConfig = {0}; 
-    
-    // someone in reswitched suggested this
-    socketConfig.tcp_tx_buf_size = 0x8000;
-    socketConfig.tcp_rx_buf_size = 0x8000;
-    socketConfig.tcp_tx_buf_max_size = 0x20000;
-    socketConfig.tcp_rx_buf_max_size = 0x20000;
-    socketConfig.udp_tx_buf_size = 0x2000;
-    socketConfig.udp_rx_buf_size = 0x2000;
-    socketConfig.sb_efficiency = 4;
-    socketConfig.num_bsd_sessions = 1;
-    socketConfig.bsd_service_type = BsdServiceType_Auto;    
-    rc = socketInitialize(&socketConfig);
+    SocketInitConfig sockConf = {
+        .tcp_tx_buf_size = 0x800,
+        .tcp_rx_buf_size = 0x1000,
+        .tcp_tx_buf_max_size = 0x2EE0,
+        .tcp_rx_buf_max_size = 0x2EE0,
+
+        .udp_tx_buf_size = 0x2000,
+        .udp_rx_buf_size = 0x8000,
+
+        .sb_efficiency = 4,
+
+        .num_bsd_sessions = 1,
+        .bsd_service_type = BsdServiceType_Auto,
+    };
+    rc = socketInitialize(&sockConf);
     if (R_FAILED(rc))
         writeToLog("[SwitchRPC] Warning: socketInitialize failed with code 0x%08X. Network features will not work.", rc);
     curl_global_init(CURL_GLOBAL_DEFAULT);
