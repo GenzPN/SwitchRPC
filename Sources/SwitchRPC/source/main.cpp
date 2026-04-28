@@ -37,31 +37,29 @@ Result get_app_info(AppInfo *info) {
 	rc = pmdmntGetProgramId(out_tid, *out_pid);
 	if (R_FAILED(rc)) return rc;
 	
-	// make control data struct instance
-	NsApplicationControlData appControlData = {0};
-	size_t _appControlDataSize = sizeof(NsApplicationControlData);
-    u64 appControlDataSize = _appControlDataSize;
+	NsApplicationControlData* appControlData = (NsApplicationControlData*)malloc(sizeof(NsApplicationControlData));
+	if (appControlData == NULL) return MAKERESULT(Module_Libnx, LibnxError_OutOfMemory);
+	
+	memset(appControlData, 0, sizeof(NsApplicationControlData));
+    u64 appControlDataSize = sizeof(NsApplicationControlData);
 	NacpLanguageEntry *languageEntry;
 	
-	memset(&appControlData, 0, sizeof(NsApplicationControlData));
-
-	if (R_SUCCEEDED(nsGetApplicationControlData(NsApplicationControlSource_Storage, *out_tid, &appControlData, appControlDataSize, &appControlDataSize))) {
-		if (R_SUCCEEDED(nacpGetLanguageEntry(&appControlData.nacp, &languageEntry))) {
+	if (R_SUCCEEDED(nsGetApplicationControlData(NsApplicationControlSource_Storage, *out_tid, appControlData, appControlDataSize, &appControlDataSize))) {
+		if (R_SUCCEEDED(nacpGetLanguageEntry(&appControlData->nacp, &languageEntry))) {
 			if (languageEntry != NULL) {
 				strncpy(info->title_name, languageEntry->name, sizeof(info->title_name) - 1);
-				info->title_name[sizeof(info->title_name) - 1] = '\0'; // Ensure null termination
+				info->title_name[sizeof(info->title_name) - 1] = '\0';
 			} else {
-				strncpy(info->title_name, "Unknown Title", sizeof(info->title_name) - 1);
-				info->title_name[sizeof(info->title_name) - 1] = '\0'; // Ensure null termination
+                return MAKERESULT(Module_Libnx, LibnxError_NotFound);
 			}
 		} else {
-			strncpy(info->title_name, "N/A", sizeof(info->title_name) - 1);
-			info->title_name[sizeof(info->title_name) - 1] = '\0'; // Ensure null termination
+            return MAKERESULT(Module_Libnx, LibnxError_NotFound);
 		}
 	} else {
-		strncpy(info->title_name, "N/A", sizeof(info->title_name) - 1);
-		info->title_name[sizeof(info->title_name) - 1] = '\0'; // Ensure null termination
+        return MAKERESULT(Module_Libnx, LibnxError_NotFound);
 	}
+
+	free(appControlData);
 
     return 0;
 }
@@ -198,9 +196,9 @@ int main(int argc, char* argv[])
                 }
             }
         } else {
-            printf("Failed to get app info: 0x%08x\n", rc);
+            // consider any failures as not having a title open. 
         }
-        svcSleepThread(60 * 1000 * 1000 * 1000ULL); // Sleep for 60 seconds
+        svcSleepThread(10 * 1000 * 1000 * 1000ULL);
     }
 
     return 0;
