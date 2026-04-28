@@ -117,21 +117,23 @@ void __appInit(void)
 
     // Disable this if you don't want to use the SD card filesystem.
     fsdevMountSdmc();
+    initLog();
 
     // Add other services you want to use here.
-    SocketInitConfig socketConfig = {0}; 
+    // SocketInitConfig socketConfig = {0}; 
     
     // someone in reswitched suggested this
-    socketConfig.tcp_tx_buf_size = 0x8000;
-    socketConfig.tcp_rx_buf_size = 0x8000;
-    socketConfig.tcp_tx_buf_max_size = 0x20000;
-    socketConfig.tcp_rx_buf_max_size = 0x20000;
-    socketConfig.udp_tx_buf_size = 0x0;
-    socketConfig.udp_rx_buf_size = 0x0;
-    socketConfig.sb_efficiency = 1;
-    socketConfig.bsd_service_type = BsdServiceType_Auto;    
-    socketInitialize(&socketConfig);
-
+    // socketConfig.tcp_tx_buf_size = 0x8000;
+    // socketConfig.tcp_rx_buf_size = 0x8000;
+    // socketConfig.tcp_tx_buf_max_size = 0x20000;
+    // socketConfig.tcp_rx_buf_max_size = 0x20000;
+    // socketConfig.udp_tx_buf_size = 0x0;
+    // socketConfig.udp_rx_buf_size = 0x0;
+    // socketConfig.sb_efficiency = 1;
+    // socketConfig.bsd_service_type = BsdServiceType_Auto;    
+    rc = socketInitializeDefault();
+    if (R_FAILED(rc))
+        writeToLog("[SwitchRPC] Warning: socketInitialize failed with code 0x%08X. Network features will not work.", rc);
     curl_global_init(CURL_GLOBAL_DEFAULT);
 	
 	pmdmntInitialize();
@@ -169,7 +171,6 @@ const int REFRESH_INTERVAL = 15 * 60;
 
 int main(int argc, char* argv[])
 {
-    initLog();
     writeToLog("[SwitchRPC] Sysmodule started successfully.");
 
     AppInfo lastInfo = {0};
