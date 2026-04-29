@@ -13,6 +13,10 @@
 #include "discord.hpp"
 #include "logging.hpp"
 
+// might rewrite this sysmodule in swift again.
+// i didnt need to rewrite in c++ but i ran out of ideas to fix crashing in swift
+// but it was just a big struct being put on stack in swift. 
+
 // Size of the inner heap (adjust as necessary).
 #define INNER_HEAP_SIZE 0x80000
 
