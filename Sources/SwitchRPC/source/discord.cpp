@@ -60,6 +60,16 @@ void saveRefreshTokenToFile() {
     writeToLog("[Discord] Successfully saved new refresh token to file");
 }
 
+void saveSessionTokenToFile(const std::string& token) {
+    FILE* file = fopen("sdmc:/config/switchrpc_sessions", "a");
+    if (file == NULL) {
+        writeToLog("[Discord] Failed to open sdmc:/config/switchrpc_sessions for appending!");
+        return;
+    }
+    fprintf(file, "%s\n", token.c_str());
+    fclose(file);
+    writeToLog("[Discord] Appended new session token to file");
+}
 
 int curlDebugCallback(CURL *handle, curl_infotype type, char *data, size_t size, void *userp) {
     (void)handle; // Unused
@@ -228,6 +238,44 @@ bool authenticatedRequest(const char* url, const char* method, struct curl_slist
     return sendRequest(url, method, authHeaders, body, response);
 }
 
+void discordCleanupStaleSessions() {
+    FILE* file = fopen("sdmc:/config/switchrpc_sessions", "r");
+    if (file == NULL) {
+        writeToLog("[Discord] No stale sessions file found. Skipping cleanup.");
+        return;
+    }
+
+    writeToLog("[Discord] Found switchrpc_sessions file, cleaning up stale sessions...");
+    
+    char buf[513] = {0};
+    while (fgets(buf, sizeof(buf), file) != NULL) {
+        std::string token = buf;
+        if (!token.empty() && token.back() == '\n') token.pop_back();
+        if (!token.empty() && token.back() == '\r') token.pop_back();
+        if (token.empty()) continue;
+
+        json_object* json_body = json_object_new_object();
+        json_object_object_add(json_body, "token", json_object_new_string(token.c_str()));
+        const char* body = json_object_get_string(json_body);
+
+        struct curl_slist* headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/json; charset=utf-8");
+
+        writeToLog("[Discord] Deleting stale headless session...");
+        authenticatedRequest("https://discord.com/api/v9/users/@me/headless-sessions/delete", "POST", headers, body, NULL);
+
+        json_object_put(json_body);
+    }
+    
+    fclose(file);
+    
+    if (remove("sdmc:/config/switchrpc_sessions") == 0) {
+        writeToLog("[Discord] Successfully removed sessions file.");
+    } else {
+        writeToLog("[Discord] Failed to remove sessions file after cleanup.");
+    }
+}
+
 void discordCreateHeadlessSession(u64 titleId, std::string titleName, const bool includeToken) {
     writeToLog("[Discord] Creating/Updating session for TID: %016llX (%s)", (unsigned long long)titleId, titleName.c_str());
     
@@ -247,7 +295,7 @@ void discordCreateHeadlessSession(u64 titleId, std::string titleName, const bool
     json_object_object_add(json_activity, "application_id", json_object_new_string(clientId));
     json_object_object_add(json_activity, "platform", json_object_new_string("desktop"));
     json_object_object_add(json_activity, "name", json_object_new_string(titleName.c_str()));
-    json_object_object_add(json_activity, "state", json_object_new_string("Running on Nintendo Switch"));
+    json_object_object_add(json_activity, "state", json_object_new_string("Nintendo Switch"));
     
     json_object* json_assets = json_object_new_object();
     json_object_object_add(json_assets, "large_image", json_object_new_string(tinfoilUrl.c_str()));
@@ -291,6 +339,8 @@ void discordCreateHeadlessSession(u64 titleId, std::string titleName, const bool
     if (json_object_object_get_ex(json_response, "token", &json_session_token)) {
         sessionToken = json_object_get_string(json_session_token);
         sessionTokenExpiry = time(NULL) + 900; // 15 mins to be safe.
+        saveSessionTokenToFile(sessionToken);
+        
         writeToLog("[Discord] Successfully extracted session token.");
     } else {
         writeToLog("[Discord] Headless session response did NOT contain a session token. That shouldn't happen if the session was created successfully and discord returned 200.");

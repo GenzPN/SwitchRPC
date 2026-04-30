@@ -21,3 +21,9 @@ void discordCreateHeadlessSession(u64 titleId, std::string titleName, const bool
  * Call this when the game closes or the sysmodule is exiting.
  */
 void discordDeleteHeadlessSession();
+
+/**
+ * Deletes all known sessions by clearing the sessions file.
+ * Call this on startup or when waking from sleep to clean up any sessions that should no longer be active.
+ */
+void discordCleanupStaleSessions();

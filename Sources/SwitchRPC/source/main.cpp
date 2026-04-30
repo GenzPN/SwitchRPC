@@ -184,6 +184,9 @@ int main(int argc, char* argv[])
 
     AppInfo lastInfo = {0};
     time_t last_update_time = 0;
+
+    // Start by cleaning up stale sessions 
+    discordCleanupStaleSessions();
     
     while (true) {
         AppInfo info = {0};
@@ -231,7 +234,18 @@ int main(int argc, char* argv[])
             }
         }
 
-        svcSleepThread(10 * 1000 * 1000 * 1000ULL);
+        // sleep detection
+        time_t sleep_start = time(NULL);
+        svcSleepThread(10 * 1000 * 1000 * 1000ULL); 
+        time_t sleep_end = time(NULL);
+
+        if (sleep_end - sleep_start > 15) {
+            writeToLog("[SwitchRPC] Wake from sleep detected! Sleep thread took %lld seconds.", (long long)(sleep_end - sleep_start));
+            
+            last_update_time = 0; 
+            discordDeleteHeadlessSession(); // delete current session. 
+            discordCleanupStaleSessions(); // cleanup any sessions we created prior.
+        }
     }
 
     return 0;
