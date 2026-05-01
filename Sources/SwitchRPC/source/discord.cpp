@@ -108,9 +108,38 @@ bool sendRequest(const char* url, const char* method, struct curl_slist* headers
     if(curl) {
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
-        headers = curl_slist_append(headers, "Accept: application/json");
-        headers = curl_slist_append(headers, "Connection: close");
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_slist* reqHeaders = NULL;
+        reqHeaders = curl_slist_append(reqHeaders, "Accept: application/json");
+        // discord social sdk sends these
+        reqHeaders = curl_slist_append(reqHeaders, "User-Agent: Discord Embedded/0.0.8");
+        // x super props
+        /*
+        {
+            "browser":"Discord Embedded",
+            "browser_user_agent":"Discord Embedded/0.0.8",
+            "browser_version":"0.0.8",
+            "client_build_number":304683,
+            "design_id":0,
+            "os":"Unknown",
+            "release_channel":"unknown"
+        }
+        */
+        // basically static, hardcoding b64 string.
+        reqHeaders = curl_slist_append(reqHeaders, "X-Super-Properties: eyJicm93c2VyIjoiRGlzY29yZCBFbWJlZGRlZCIsImJyb3dzZXJfdXNlcl9hZ2VudCI6IkRpc2NvcmQgRW1iZWRkZWQvMC4wLjgiLCJicm93c2VyX3ZlcnNpb24iOiIwLjAuOCIsImNsaWVudF9idWlsZF9udW1iZXIiOjMwNDY4MywiZGVzaWduX2lkIjowLCJvcyI6IlVua25vd24iLCJyZWxlYXNlX2NoYW5uZWwiOiJ1bmtub3duIn0K");
+        // host
+        if (strstr(url, "discord.com") != NULL) {
+            reqHeaders = curl_slist_append(reqHeaders, "Host: discord.com");
+        } else if (strstr(url, "gaming-sdk.com") != NULL) {
+            reqHeaders = curl_slist_append(reqHeaders, "Host: gaming-sdk.com");
+        }
+
+        reqHeaders = curl_slist_append(reqHeaders, "Connection: close");
+
+        // iterate through the provided headers and add them to the request, overriding any duplicates of the default headers we set above
+        for (curl_slist* header = headers; header != NULL; header = header->next) {
+            reqHeaders = curl_slist_append(reqHeaders, header->data);
+        }
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, reqHeaders);
         if (body != NULL)
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
@@ -125,7 +154,7 @@ bool sendRequest(const char* url, const char* method, struct curl_slist* headers
         dns_cache = curl_slist_append(dns_cache, "gaming-sdk.com:443:172.64.146.157");
         curl_easy_setopt(curl, CURLOPT_RESOLVE, dns_cache);
 
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
         curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, curlDebugCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char* ptr, size_t size, size_t nmemb, void* userdata) -> size_t {
             size_t total_size = size * nmemb;
@@ -154,12 +183,14 @@ bool sendRequest(const char* url, const char* method, struct curl_slist* headers
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
         bool success = (http_code >= 200 && http_code < 300);
         
-        curl_slist_free_all(headers);
+        curl_slist_free_all(reqHeaders);
+        curl_slist_free_all(headers); 
+        curl_slist_free_all(dns_cache);
         curl_easy_cleanup(curl);
-
         return success;
     } else {
         writeToLog("[Discord] Failed to initialize cURL!");
+        curl_slist_free_all(headers);
         return false;
     }
 }

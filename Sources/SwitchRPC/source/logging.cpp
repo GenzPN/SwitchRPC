@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
+#include <switch.h>
 
 const char* LOG_FILE_PATH = "sdmc:/switchrpc_log.txt";
 
@@ -17,12 +18,18 @@ void writeToLog(const char* format, ...) {
     FILE* f = fopen(LOG_FILE_PATH, "a");
     if (!f) return;
 
-    time_t now = time(NULL);
-    struct tm *t = localtime(&now);
+    u64 timestamp;
+    if (R_FAILED(timeGetCurrentTime(TimeType_Default, &timestamp))) {
+        timestamp = time(NULL);
+    } 
+    TimeLocationName location;
+    timeGetDeviceLocationName(&location);
+    TimeZoneRule rule;
+    timeLoadTimeZoneRule(&location, &rule);
+    TimeCalendarTime t;
+    timeToCalendarTime(&rule, timestamp, &t, nullptr);
     
-    if (t) {
-        fprintf(f, "[%02d:%02d:%02d] ", t->tm_hour, t->tm_min, t->tm_sec);
-    }
+    fprintf(f, "[%02d:%02d:%02d] ", t.hour, t.minute, t.second);
 
     va_list args;
     va_start(args, format);

@@ -12,6 +12,7 @@
 
 #include "discord.hpp"
 #include "logging.hpp"
+#include "utilities.hpp"
 
 // might rewrite this sysmodule in swift again.
 // i didnt need to rewrite in c++ but i ran out of ideas to fix crashing in swift
@@ -121,6 +122,9 @@ void __appInit(void)
     if (R_FAILED(rc))
         diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_InitFail_FS));
 
+    timeInitialize();
+    nifmInitialize(NifmServiceType_System);
+
     // Disable this if you don't want to use the SD card filesystem.
     fsdevMountSdmc();
     initLog();
@@ -165,6 +169,8 @@ void __appExit(void)
     setExit();
     nsExit();
     pmdmntExit();
+    nifmExit();
+    timeExit();
 
     // Close extra services you added to __appInit here.
     fsdevUnmountAll(); // Disable this if you don't want to use the SD card filesystem.
@@ -188,6 +194,7 @@ int main(int argc, char* argv[])
     // Start by cleaning up stale sessions 
     discordCleanupStaleSessions();
     
+    waitForNetworkReady();
     while (true) {
         AppInfo info = {0};
         Result rc = get_app_info(&info);
@@ -226,7 +233,8 @@ int main(int argc, char* argv[])
             // user isn't in a game. if we had a session before, delete it since the game closed, and reset lastInfo.
             if (lastInfo.tid != 0) {
                 writeToLog("[SwitchRPC] Game closed or returned to Home Menu. Clearing session for TID: %016llX", (unsigned long long)lastInfo.tid);
-                
+                waitForNetworkReady();
+
                 lastInfo = {0};
                 last_update_time = 0;
                 

@@ -43,4 +43,4 @@ The sysmodule was written in Swift originally but rewritten in C++ because I was
 ## Risks
 
 Should be minimal probably, I use API routes from the Discord Social SDK. Their domain is `gaming-sdk.com` :sob: anyways it also uses discord headless sessions.
-I haven't gotten to mimicking the official requests made by the SDK just yet, ban risk is non-zero.
+Headers n stuff are in place.
