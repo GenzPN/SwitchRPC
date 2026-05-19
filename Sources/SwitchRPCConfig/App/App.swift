@@ -103,9 +103,16 @@ struct Menu {
 			var buffer = [CChar](repeating: 0, count: 2048)
 			var newLogs: [String] = []
 			while fgets(&buffer, Int32(buffer.count), file) != nil {
-				let line = String(cStr: buffer).trimmingCharacters(in: .whitespacesAndNewlines)
-				if !line.isEmpty {
-					newLogs.append(line)
+				let line = String(cStr: buffer)
+				// Manual trim - remove newlines and carriage returns
+				var trimmed = ""
+				for char in line {
+					if char != "\n" && char != "\r" {
+						trimmed.append(char)
+					}
+				}
+				if !trimmed.isEmpty {
+					newLogs.append(trimmed)
 				}
 			}
 			fclose(file)
