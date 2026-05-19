@@ -27,19 +27,7 @@ all: $(COMPONENTS)
 	@cp $(IN_CONFIGAPP_FILE) 		$(OUT_DIR)/switch/SwitchRPCConfig.nro
 	#	Zipping up files
 	@echo Zipping files now...
-	@sh -c 'if command -v zip >/dev/null 2>&1; then zip -r ./SwitchRPC.zip "$(OUT_DIR)/switch" "$(OUT_DIR)/atmosphere"; else python3 - <<"PY"
-import pathlib
-import zipfile
-
-root = pathlib.Path("$(OUT_DIR)")
-archive = pathlib.Path("SwitchRPC.zip")
-
-with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-    for path in root.rglob("*"):
-        if path.is_file():
-            zf.write(path, path.as_posix())
-PY
-fi'
+	@sh -c 'if command -v zip >/dev/null 2>&1; then zip -r ./SwitchRPC.zip "$(OUT_DIR)/switch" "$(OUT_DIR)/atmosphere"; else OUT_DIR="$(OUT_DIR)" python3 -c "import os, pathlib, zipfile; root = pathlib.Path(os.environ[\"OUT_DIR\"]); archive = pathlib.Path(\"SwitchRPC.zip\"); zf = zipfile.ZipFile(archive, \"w\", compression=zipfile.ZIP_DEFLATED); exec(\"for path in root.rglob(\\\"*\\\"):\\n    if path.is_file():\\n        zf.write(path, path.as_posix())\"); zf.close()"; fi'
 	@rm -rf $(TOPDIR)/$(OUT_DIR)
 	# clean up
 	@rm -rf $(IN_SYSMODULE_DIR)/SwitchRPC.nsp \
