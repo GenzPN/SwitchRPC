@@ -90,9 +90,30 @@ struct Menu {
 
 	var logs: [String] = [] {
 		didSet {
-			// limit to the last 10 logs
-			if logs.count > 10 {
-				logs.removeFirst(logs.count - 10)
+			// limit to the last 20 logs
+			if logs.count > 20 {
+				logs.removeFirst(logs.count - 20)
+			}
+		}
+	}
+	
+	mutating func loadSysmoduleLogs() {
+		let logPath = "sdmc:/config/switchrpc_logs.txt"
+		if let file = fopen(logPath, "r") {
+			var buffer = [CChar](repeating: 0, count: 2048)
+			var newLogs: [String] = []
+			while fgets(&buffer, Int32(buffer.count), file) != nil {
+				let line = String(cStr: buffer).trimmingCharacters(in: .whitespacesAndNewlines)
+				if !line.isEmpty {
+					newLogs.append(line)
+				}
+			}
+			fclose(file)
+			// Keep only last 20 logs
+			if newLogs.count > 20 {
+				logs = Array(newLogs.suffix(20))
+			} else {
+				logs = newLogs
 			}
 		}
 	}
@@ -113,6 +134,9 @@ struct Menu {
 			ctx.exit()
 			return
 		}
+		
+		// Load sysmodule logs every tick
+		self.loadSysmoduleLogs()
 		
 		// Move selection
 		if ctx.pad.wasButtonPressed(.anyDown) {
@@ -258,22 +282,34 @@ struct Menu {
 
 extension Menu {
 	mutating func draw() {
-		print("\nSwitchRPC\n")
+		print("\n═══════════════════════════════════════")
+		print("        SwitchRPC Config")
+		print("═══════════════════════════════════════\n")
+		
+		// Menu options
 		for (i, line) in self.currentOptions.enumerated() {
-			let selector = (i == self.selectedIndex) ? "-> " : "   "
+			let selector = (i == self.selectedIndex) ? "→ " : "  "
 			print("  \(selector)\(line)")
 		}
-		print("\n\n")
-		print("By llsc12")
-		print("\n")
-		print(
-			"[ Logs ]\n"
-		)
-		for log in self.logs {
-			print(log)
+		
+		print("\n───────────────────────────────────────")
+		print("  [ Sysmodule Logs ]")
+		print("───────────────────────────────────────\n")
+		
+		if self.logs.isEmpty {
+			print("  (No logs yet)")
+		} else {
+			for log in self.logs {
+				// Truncate long lines to fit screen
+				let maxLen = 70
+				let displayLog = log.count > maxLen ? String(log.prefix(maxLen)) + "..." : log
+				print("  \(displayLog)")
+			}
 		}
 
-		print("\n\n\n\n\n                    yop")
+		print("\n\n  By llsc12")
+		print("  Press ▲▼ to navigate, A to select")
+		print("  Press + to exit")
 	}
 
 	mutating func forceRedraw() {
