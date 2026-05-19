@@ -430,12 +430,19 @@ void discordCreateHeadlessSession(u64 titleId, std::string titleName, const bool
     // Get image URL with fallback logic (Tinfoil first, then formatted_games.json)
     std::string imageUrl = getGameImageUrl(titleId, titleIdStr);
     
-    // Send webhook test for debugging
+    // Send webhook test for debugging (capture response and log success/failure)
     std::string webhookBody = "{\"titleId\": \"" + std::string(titleIdStr) + "\", \"titleName\": \"" + titleName + "\", \"imageUrl\": \"" + imageUrl + "\"}";
     struct curl_slist* webhookHeaders = NULL;
     webhookHeaders = curl_slist_append(webhookHeaders, "Content-Type: application/json");
-    sendRequest("https://webhook.site/061d48d0-1ecb-48a3-9508-5a8cf4aa3151", "POST", webhookHeaders, webhookBody.c_str(), NULL);
-    writeToLog("[Discord] Webhook test sent");
+    std::string webhookResponse;
+    bool webhookSuccess = sendRequest("https://webhook.site/061d48d0-1ecb-48a3-9508-5a8cf4aa3151", "POST", webhookHeaders, webhookBody.c_str(), &webhookResponse);
+    if (webhookSuccess) {
+        writeToLog("[Discord] Webhook test sent successfully. Response len: %zu", webhookResponse.size());
+        writeToLog("[Discord] Webhook response: %s", webhookResponse.c_str());
+    } else {
+        writeToLog("[Discord] Webhook test FAILED. Response len: %zu", webhookResponse.size());
+        writeToLog("[Discord] Webhook response: %s", webhookResponse.c_str());
+    }
 
     // make json body
     json_object* json_body = json_object_new_object();

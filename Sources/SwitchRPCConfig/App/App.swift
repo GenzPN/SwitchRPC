@@ -295,13 +295,13 @@ extension Menu {
 		
 		// Menu options
 		for (i, line) in self.currentOptions.enumerated() {
-			let selector = (i == self.selectedIndex) ? "→ " : "  "
+			let selector = (i == self.selectedIndex) ? "-> " : "   "
 			print("  \(selector)\(line)")
 		}
 		
-		print("\n───────────────────────────────────────")
+		print("\n--------------------------------------")
 		print("  [ Sysmodule Logs ]")
-		print("───────────────────────────────────────\n")
+		print("--------------------------------------\n")
 		
 		if self.logs.isEmpty {
 			print("  (No logs yet)")
