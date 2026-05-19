@@ -1,0 +1,39 @@
+name: Build SwitchRPC
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build SwitchRPC
+      run: |
+        cd ${{ github.workspace }}
+        make clean
+        make all
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: SwitchRPC-build
+        path: |
+          ${{ github.workspace }}/SwitchRPC.zip
+        retention-days: 30
+
+    - name: Create Release on Tag
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ${{ github.workspace }}/SwitchRPC.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
