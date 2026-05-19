@@ -18,8 +18,8 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pacman -Sy
-        pacman -S --noconfirm switch-dev switch-tools switch-libnx switch-libdrm_nouveau
+        apt-get update
+        apt-get install -y switch-dev switch-tools switch-libnx
 
     - name: Build SwitchRPC
       run: |
