@@ -19,10 +19,24 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install libnx dependencies
+    - name: Install devkitPro packages
+      run: |
+        dkp-pacman -Syu --noconfirm
+        dkp-pacman -S --noconfirm switch-dev switch-curl switch-libjson-c
+
+    - name: Install Swift toolchain
       run: |
         apt-get update
-        apt-get install -y libnx-dev
+        apt-get install -y curl ca-certificates tar gzip
+        curl -fL -o /tmp/swiftly.tar.gz https://download.swift.org/swiftly/linux/swiftly-x86_64.tar.gz
+        mkdir -p /tmp/swiftly
+        tar -xzf /tmp/swiftly.tar.gz -C /tmp/swiftly
+        cd /tmp/swiftly
+        yes Y | ./swiftly init --quiet-shell-followup --no-modify-profile
+        . "${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh"
+        swiftly install 6.3.2
+        echo "${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/bin" >> "$GITHUB_PATH"
+        swiftc --version
 
     - name: Build SwitchRPC
       run: |

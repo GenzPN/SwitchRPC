@@ -66,7 +66,7 @@ LIBS := -lnx `curl-config --libs` -ljson-c
 
 # Swift specific flags
 CFLAGS += -DNXApp
-SWIFT_TOOLCHAIN ?= $(shell dirname $(shell dirname $(shell command -v swiftc 2>/dev/null)))
+SWIFT_TOOLCHAIN ?= $(shell sh -c 'swiftc_path=$$(command -v swiftc 2>/dev/null); if [ -n "$$swiftc_path" ]; then swiftc_real=$$(readlink -f "$$swiftc_path" 2>/dev/null || printf "%s" "$$swiftc_path"); dirname "$$(dirname "$$swiftc_real")"; fi')
 SWIFTC ?= swiftc
 UNICODE_SUPPORT := $(firstword $(wildcard \
 	$(SWIFT_TOOLCHAIN)/usr/lib/swift/embedded/aarch64-none-none-elf/libswiftUnicodeDataTables.a \
