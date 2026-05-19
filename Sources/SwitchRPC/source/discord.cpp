@@ -357,12 +357,12 @@ std::string getImageFromFormattedGames(const char* titleIdStr) {
         if (json_object_object_get_ex(json_game, "id", &json_id)) {
             const char* id = json_object_get_string(json_id);
             if (id != NULL && strcmp(id, titleIdStr) == 0) {
-                json_object* json_image;
-                if (json_object_object_get_ex(json_game, "image", &json_image)) {
-                    imageUrl = json_object_get_string(json_image);
-                    writeToLog("[Discord] Found image in formatted_games.json for %s", titleIdStr);
+                json_object* json_thumbnail;
+                if (json_object_object_get_ex(json_game, "thumbnail", &json_thumbnail)) {
+                    imageUrl = json_object_get_string(json_thumbnail);
+                    writeToLog("[Discord] Found thumbnail in formatted_games.json for %s", titleIdStr);
                 } else {
-                    writeToLog("[Discord] Game found in formatted_games.json but no image field");
+                    writeToLog("[Discord] Game found in formatted_games.json but no thumbnail field");
                 }
                 break;
             }
