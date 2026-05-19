@@ -7,6 +7,7 @@
 #include <string>
 #include <set>
 #include <fstream>
+#include <sstream>
 
 #include <switch.h>
 #include <json-c/json.h>
@@ -16,6 +17,7 @@
 #include "logging.hpp"
 
 const char* clientId = "1249119754522857616";
+const char* formattedGamesPath = "sdmc:/config/switch/formatted_games.json";
 
 // discord authentication tokens
 std::string refreshToken = "";
@@ -320,15 +322,87 @@ void discordCleanupStaleSessions() {
     }
 }
 
+// Helper function to get image URL from formatted_games.json by title ID
+std::string getImageFromFormattedGames(const char* titleIdStr) {
+    std::ifstream file(formattedGamesPath);
+    if (!file.is_open()) {
+        writeToLog("[Discord] Formatted games file not found at %s", formattedGamesPath);
+        return "";
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    file.close();
+    
+    json_object* json_root = json_tokener_parse(buffer.str().c_str());
+    if (json_root == NULL) {
+        writeToLog("[Discord] Failed to parse formatted_games.json");
+        return "";
+    }
+
+    if (!json_object_is_type(json_root, json_type_array)) {
+        writeToLog("[Discord] formatted_games.json is not an array");
+        json_object_put(json_root);
+        return "";
+    }
+
+    std::string imageUrl = "";
+    size_t arrayLen = json_object_array_length(json_root);
+    
+    for (size_t i = 0; i < arrayLen; i++) {
+        json_object* json_game = json_object_array_get_idx(json_root, i);
+        if (json_game == NULL) continue;
+
+        json_object* json_id;
+        if (json_object_object_get_ex(json_game, "id", &json_id)) {
+            const char* id = json_object_get_string(json_id);
+            if (id != NULL && strcmp(id, titleIdStr) == 0) {
+                json_object* json_image;
+                if (json_object_object_get_ex(json_game, "image", &json_image)) {
+                    imageUrl = json_object_get_string(json_image);
+                    writeToLog("[Discord] Found image in formatted_games.json for %s", titleIdStr);
+                } else {
+                    writeToLog("[Discord] Game found in formatted_games.json but no image field");
+                }
+                break;
+            }
+        }
+    }
+
+    json_object_put(json_root);
+    return imageUrl;
+}
+
+// Helper function to get image URL with fallback logic (Tinfoil first, then formatted_games.json)
+std::string getGameImageUrl(u64 titleId, const char* titleIdStr) {
+    // First, try Tinfoil
+    std::string tinfoilUrl = "https://tinfoil.media/ti/";
+    tinfoilUrl += titleIdStr;
+    tinfoilUrl += "/512/512/";
+    
+    writeToLog("[Discord] Attempting to use Tinfoil image URL: %s", tinfoilUrl.c_str());
+    
+    // If Tinfoil image exists, use it; otherwise fall back to formatted_games.json
+    std::string formattedGamesUrl = getImageFromFormattedGames(titleIdStr);
+    
+    if (!formattedGamesUrl.empty()) {
+        writeToLog("[Discord] Fallback: Using image from formatted_games.json");
+        return formattedGamesUrl;
+    }
+    
+    // If neither source has an image, use Tinfoil as default (might 404 but worth trying)
+    writeToLog("[Discord] No image found in formatted_games.json, using Tinfoil URL as fallback");
+    return tinfoilUrl;
+}
+
 void discordCreateHeadlessSession(u64 titleId, std::string titleName, const bool includeToken) {
     writeToLog("[Discord] Creating/Updating session for TID: %016llX (%s)", (unsigned long long)titleId, titleName.c_str());
     
-    std::string tinfoilUrl;
     char titleIdStr[17] = {0};
     snprintf(titleIdStr, sizeof(titleIdStr), "%016llX", (unsigned long long)titleId);
-    tinfoilUrl = "https://tinfoil.media/ti/";   
-    tinfoilUrl += titleIdStr;
-    tinfoilUrl += "/512/512/";
+    
+    // Get image URL with fallback logic (Tinfoil first, then formatted_games.json)
+    std::string imageUrl = getGameImageUrl(titleId, titleIdStr);
 
     // make json body
     json_object* json_body = json_object_new_object();
@@ -342,7 +416,7 @@ void discordCreateHeadlessSession(u64 titleId, std::string titleName, const bool
     json_object_object_add(json_activity, "state", json_object_new_string("Nintendo Switch"));
     
     json_object* json_assets = json_object_new_object();
-    json_object_object_add(json_assets, "large_image", json_object_new_string(tinfoilUrl.c_str()));
+    json_object_object_add(json_assets, "large_image", json_object_new_string(imageUrl.c_str()));
     json_object_object_add(json_activity, "assets", json_assets);
     
     json_object_array_add(json_activities, json_activity);
