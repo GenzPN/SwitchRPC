@@ -16,6 +16,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install dependencies
+      run: |
+        pacman -Sy
+        pacman -S --noconfirm switch-dev switch-tools switch-libnx switch-libdrm_nouveau
+
     - name: Build SwitchRPC
       run: |
         make clean
