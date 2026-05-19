@@ -18,7 +18,6 @@ jobs:
 
     - name: Build SwitchRPC
       run: |
-        cd ${{ github.workspace }}
         make clean
         make all
 
