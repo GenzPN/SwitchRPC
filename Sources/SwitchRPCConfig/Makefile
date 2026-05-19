@@ -66,16 +66,18 @@ LIBS := -lnx `curl-config --libs` -ljson-c
 
 # Swift specific flags
 CFLAGS += -DNXApp
-SWIFT_TOOLCHAIN ?= $(shell sh -c 'swiftc_path=$$(command -v swiftc 2>/dev/null); if [ -n "$$swiftc_path" ]; then swiftc_real=$$(readlink -f "$$swiftc_path" 2>/dev/null || printf "%s" "$$swiftc_path"); dirname "$$(dirname "$$(dirname "$$swiftc_real")")"; fi')
+SWIFT_RESOURCE_DIR ?= $(shell sh -c 'swiftc -print-target-info 2>/dev/null | sed -n "s/.*\"runtimeResourcePath\":[[:space:]]*\"\([^\"]*\)\".*/\1/p" | head -n 1')
 SWIFTC ?= swiftc
 UNICODE_SUPPORT := $(firstword $(wildcard \
-	$(SWIFT_TOOLCHAIN)/usr/lib/swift/embedded/aarch64-none-none-elf/libswiftUnicodeDataTables.a \
-	$(SWIFT_TOOLCHAIN)/usr/lib/swift/linux/libswiftUnicodeDataTables.a \
-	$(SWIFT_TOOLCHAIN)/lib/swift/embedded/aarch64-none-none-elf/libswiftUnicodeDataTables.a \
-	$(SWIFT_TOOLCHAIN)/lib/swift/linux/libswiftUnicodeDataTables.a))
+	$(SWIFT_RESOURCE_DIR)/embedded/aarch64-none-none-elf/libswiftUnicodeDataTables.a \
+	$(SWIFT_RESOURCE_DIR)/linux/libswiftUnicodeDataTables.a \
+	$(SWIFT_RESOURCE_DIR)/../embedded/aarch64-none-none-elf/libswiftUnicodeDataTables.a \
+	$(SWIFT_RESOURCE_DIR)/../linux/libswiftUnicodeDataTables.a \
+	$(SWIFT_RESOURCE_DIR)/../../lib/swift/embedded/aarch64-none-none-elf/libswiftUnicodeDataTables.a \
+	$(SWIFT_RESOURCE_DIR)/../../lib/swift/linux/libswiftUnicodeDataTables.a))
 
 ifeq ($(strip $(UNICODE_SUPPORT)),)
-$(error "Could not locate libswiftUnicodeDataTables.a. Set SWIFT_TOOLCHAIN to the Swift toolchain root.")
+$(error "Could not locate libswiftUnicodeDataTables.a. Set SWIFT_RESOURCE_DIR to the Swift runtime resource directory.")
 endif
 
 # Recursive Swift file discovery
