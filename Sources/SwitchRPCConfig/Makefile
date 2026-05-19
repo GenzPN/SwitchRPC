@@ -66,10 +66,17 @@ LIBS := -lnx `curl-config --libs` -ljson-c
 
 # Swift specific flags
 CFLAGS += -DNXApp
-# SWIFTC := swiftc
-SWIFT_TOOLCHAIN := /Users/llsc12/Library/Developer/Toolchains/swift-6.2-DEVELOPMENT-SNAPSHOT-2025-07-09-a.xctoolchain
-SWIFTC := $(SWIFT_TOOLCHAIN)/usr/bin/swiftc
-UNICODE_SUPPORT = $(SWIFT_TOOLCHAIN)/usr/lib/swift/embedded/aarch64-none-none-elf/libswiftUnicodeDataTables.a
+SWIFT_TOOLCHAIN ?= $(shell dirname $(shell dirname $(shell command -v swiftc 2>/dev/null)))
+SWIFTC ?= swiftc
+UNICODE_SUPPORT := $(firstword $(wildcard \
+	$(SWIFT_TOOLCHAIN)/usr/lib/swift/embedded/aarch64-none-none-elf/libswiftUnicodeDataTables.a \
+	$(SWIFT_TOOLCHAIN)/usr/lib/swift/linux/libswiftUnicodeDataTables.a \
+	$(SWIFT_TOOLCHAIN)/lib/swift/embedded/aarch64-none-none-elf/libswiftUnicodeDataTables.a \
+	$(SWIFT_TOOLCHAIN)/lib/swift/linux/libswiftUnicodeDataTables.a))
+
+ifeq ($(strip $(UNICODE_SUPPORT)),)
+$(error "Could not locate libswiftUnicodeDataTables.a. Set SWIFT_TOOLCHAIN to the Swift toolchain root.")
+endif
 
 # Recursive Swift file discovery
 SWIFT_SRCS := $(shell find .. -name "*.swift" -type f)
