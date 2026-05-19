@@ -324,31 +324,38 @@ void discordCleanupStaleSessions() {
 
 // Helper function to get image URL from formatted_games.json by title ID
 std::string getImageFromFormattedGames(const char* titleIdStr) {
+    writeToLog("[Discord] Searching for thumbnail in formatted_games.json for ID: %s", titleIdStr);
+    
     std::ifstream file(formattedGamesPath);
     if (!file.is_open()) {
-        writeToLog("[Discord] Formatted games file not found at %s", formattedGamesPath);
+        writeToLog("[Discord] ERROR: Formatted games file not found at %s", formattedGamesPath);
         return "";
     }
+    writeToLog("[Discord] Successfully opened formatted_games.json");
 
     std::stringstream buffer;
     buffer << file.rdbuf();
     file.close();
+    writeToLog("[Discord] Read %zu bytes from formatted_games.json", buffer.str().length());
     
     json_object* json_root = json_tokener_parse(buffer.str().c_str());
     if (json_root == NULL) {
-        writeToLog("[Discord] Failed to parse formatted_games.json");
+        writeToLog("[Discord] ERROR: Failed to parse formatted_games.json as JSON");
         return "";
     }
+    writeToLog("[Discord] Successfully parsed formatted_games.json as JSON");
 
     if (!json_object_is_type(json_root, json_type_array)) {
-        writeToLog("[Discord] formatted_games.json is not an array");
+        writeToLog("[Discord] ERROR: formatted_games.json root is not an array");
         json_object_put(json_root);
         return "";
     }
 
     std::string imageUrl = "";
     size_t arrayLen = json_object_array_length(json_root);
+    writeToLog("[Discord] formatted_games.json contains %zu games", arrayLen);
     
+    bool found = false;
     for (size_t i = 0; i < arrayLen; i++) {
         json_object* json_game = json_object_array_get_idx(json_root, i);
         if (json_game == NULL) continue;
@@ -356,17 +363,36 @@ std::string getImageFromFormattedGames(const char* titleIdStr) {
         json_object* json_id;
         if (json_object_object_get_ex(json_game, "id", &json_id)) {
             const char* id = json_object_get_string(json_id);
-            if (id != NULL && strcmp(id, titleIdStr) == 0) {
-                json_object* json_thumbnail;
-                if (json_object_object_get_ex(json_game, "thumbnail", &json_thumbnail)) {
-                    imageUrl = json_object_get_string(json_thumbnail);
-                    writeToLog("[Discord] Found thumbnail in formatted_games.json for %s", titleIdStr);
-                } else {
-                    writeToLog("[Discord] Game found in formatted_games.json but no thumbnail field");
+            if (id != NULL) {
+                // Log first 10 IDs and every match attempt for debugging
+                if (i < 10 || strcmp(id, titleIdStr) == 0) {
+                    writeToLog("[Discord] [%zu] Comparing ID '%s' with target '%s' - Match: %s", 
+                        i, id, titleIdStr, strcmp(id, titleIdStr) == 0 ? "YES" : "NO");
                 }
-                break;
+                
+                if (strcmp(id, titleIdStr) == 0) {
+                    found = true;
+                    writeToLog("[Discord] FOUND matching ID at index %zu!", i);
+                    
+                    json_object* json_thumbnail;
+                    if (json_object_object_get_ex(json_game, "thumbnail", &json_thumbnail)) {
+                        imageUrl = json_object_get_string(json_thumbnail);
+                        writeToLog("[Discord] Successfully extracted thumbnail: %s", imageUrl.c_str());
+                    } else {
+                        writeToLog("[Discord] ERROR: Game found but thumbnail field is missing or null");
+                        json_object* json_title;
+                        if (json_object_object_get_ex(json_game, "title", &json_title)) {
+                            writeToLog("[Discord] Game title: %s", json_object_get_string(json_title));
+                        }
+                    }
+                    break;
+                }
             }
         }
+    }
+    
+    if (!found) {
+        writeToLog("[Discord] ERROR: ID '%s' not found in any of the %zu games", titleIdStr, arrayLen);
     }
 
     json_object_put(json_root);
