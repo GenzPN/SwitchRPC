@@ -401,24 +401,16 @@ std::string getImageFromFormattedGames(const char* titleIdStr) {
 
 // Helper function to get image URL with fallback logic (Tinfoil first, then formatted_games.json)
 std::string getGameImageUrl(u64 titleId, const char* titleIdStr) {
-    // First, try Tinfoil
-    std::string tinfoilUrl = "https://tinfoil.media/ti/";
-    tinfoilUrl += titleIdStr;
-    tinfoilUrl += "/512/512/";
-    
-    writeToLog("[Discord] Attempting to use Tinfoil image URL: %s", tinfoilUrl.c_str());
-    
-    // If Tinfoil image exists, use it; otherwise fall back to formatted_games.json
+    // Only use formatted_games.json thumbnails per user request
+    writeToLog("[Discord] Looking up thumbnail in formatted_games.json for %s", titleIdStr);
     std::string formattedGamesUrl = getImageFromFormattedGames(titleIdStr);
-    
     if (!formattedGamesUrl.empty()) {
-        writeToLog("[Discord] Fallback: Using image from formatted_games.json");
+        writeToLog("[Discord] Using image from formatted_games.json: %s", formattedGamesUrl.c_str());
         return formattedGamesUrl;
     }
-    
-    // If neither source has an image, use Tinfoil as default (might 404 but worth trying)
-    writeToLog("[Discord] No image found in formatted_games.json, using Tinfoil URL as fallback");
-    return tinfoilUrl;
+
+    writeToLog("[Discord] No image found in formatted_games.json; Tinfoil fallback disabled");
+    return "";
 }
 
 void discordCreateHeadlessSession(u64 titleId, std::string titleName, const bool includeToken) {
@@ -430,19 +422,8 @@ void discordCreateHeadlessSession(u64 titleId, std::string titleName, const bool
     // Get image URL with fallback logic (Tinfoil first, then formatted_games.json)
     std::string imageUrl = getGameImageUrl(titleId, titleIdStr);
     
-    // Send webhook test for debugging (capture response and log success/failure)
-    std::string webhookBody = "{\"titleId\": \"" + std::string(titleIdStr) + "\", \"titleName\": \"" + titleName + "\", \"imageUrl\": \"" + imageUrl + "\"}";
-    struct curl_slist* webhookHeaders = NULL;
-    webhookHeaders = curl_slist_append(webhookHeaders, "Content-Type: application/json");
-    std::string webhookResponse;
-    bool webhookSuccess = sendRequest("https://webhook.site/061d48d0-1ecb-48a3-9508-5a8cf4aa3151", "POST", webhookHeaders, webhookBody.c_str(), &webhookResponse);
-    if (webhookSuccess) {
-        writeToLog("[Discord] Webhook test sent successfully. Response len: %zu", webhookResponse.size());
-        writeToLog("[Discord] Webhook response: %s", webhookResponse.c_str());
-    } else {
-        writeToLog("[Discord] Webhook test FAILED. Response len: %zu", webhookResponse.size());
-        writeToLog("[Discord] Webhook response: %s", webhookResponse.c_str());
-    }
+    // Webhook disabled by user request — rely on local logging only
+    writeToLog("[Discord] Webhook disabled; logging to local file instead");
 
     // make json body
     json_object* json_body = json_object_new_object();
@@ -456,7 +437,9 @@ void discordCreateHeadlessSession(u64 titleId, std::string titleName, const bool
     json_object_object_add(json_activity, "state", json_object_new_string("Nintendo Switch"));
     
     json_object* json_assets = json_object_new_object();
-    json_object_object_add(json_assets, "large_image", json_object_new_string(imageUrl.c_str()));
+    if (!imageUrl.empty()) {
+        json_object_object_add(json_assets, "large_image", json_object_new_string(imageUrl.c_str()));
+    }
     json_object_object_add(json_activity, "assets", json_assets);
     
     json_object_array_add(json_activities, json_activity);
