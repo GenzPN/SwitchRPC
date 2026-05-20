@@ -25,9 +25,12 @@ all: $(COMPONENTS)
 	#	App files
 	@mkdir -p $(OUT_DIR)/switch
 	@cp $(IN_CONFIGAPP_FILE) 		$(OUT_DIR)/switch/SwitchRPCConfig.nro
+	#	Config files
+	@mkdir -p $(OUT_DIR)/config/switch
+	@cp $(IN_SYSMODULE_DIR)/source/formatted_games.json 	$(OUT_DIR)/config/switch/formatted_games.json
 	#	Zipping up files
 	@echo Zipping files now...
-	@sh -c 'if command -v zip >/dev/null 2>&1; then zip -r ./SwitchRPC.zip "$(OUT_DIR)/switch" "$(OUT_DIR)/atmosphere"; else OUT_DIR="$(OUT_DIR)" python3 -c "import os, pathlib, zipfile; root = pathlib.Path(os.environ[\"OUT_DIR\"]); archive = pathlib.Path(\"SwitchRPC.zip\"); zf = zipfile.ZipFile(archive, \"w\", compression=zipfile.ZIP_DEFLATED); exec(\"for path in root.rglob(\\\"*\\\"):\\n    if path.is_file():\\n        zf.write(path, path.as_posix())\"); zf.close()"; fi'
+	@sh -c 'if command -v zip >/dev/null 2>&1; then zip -r ./SwitchRPC.zip "$(OUT_DIR)/switch" "$(OUT_DIR)/atmosphere" "$(OUT_DIR)/config"; else OUT_DIR="$(OUT_DIR)" python3 -c "import os, pathlib, zipfile; root = pathlib.Path(os.environ[\"OUT_DIR\"]); archive = pathlib.Path(\"SwitchRPC.zip\"); zf = zipfile.ZipFile(archive, \"w\", compression=zipfile.ZIP_DEFLATED); exec(\"for path in root.rglob(\\\"*\\\"):\\n    if path.is_file():\\n        zf.write(path, path.as_posix())\"); zf.close()"; fi'
 	@rm -rf $(TOPDIR)/$(OUT_DIR)
 	# clean up
 	@rm -rf $(IN_SYSMODULE_DIR)/SwitchRPC.nsp \
